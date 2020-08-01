@@ -71,7 +71,7 @@ int main(int argc, char **argv) {
         throw std::runtime_error("Could not open kProcessor index file");
     }
 
-    int batchSize = 10000;
+    int batchSize = 5000;
     int kSize = 25;
     int no_of_sequences;
 
@@ -81,7 +81,12 @@ int main(int argc, char **argv) {
     ifstream file(PE_1_reads_file);
     while (getline(file, line)) count++;
 
-    no_of_sequences = count / 2;
+    if (PE_1_reads_file.find("fastq") != std::string::npos || PE_1_reads_file.find("fq") != std::string::npos) {
+        no_of_sequences = count / 4;
+    }else{
+        no_of_sequences = count / 2;
+    }
+
     int no_chunks = ceil((double) no_of_sequences / (double) batchSize);
     cerr << "processing " << no_of_sequences << " reads in " << no_chunks << " chunks ..." << endl;
 
@@ -173,7 +178,7 @@ int main(int argc, char **argv) {
             output << ambiguous << '\t' << total_aligned + ambiguous << '\t' << unmapped << '\n';
         }
 
-
+        cerr << "Done in " << time_diff(_currentTime) << endl;
     }
 
 
