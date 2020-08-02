@@ -38,15 +38,25 @@ inline string time_diff(std::chrono::high_resolution_clock::time_point &t1) {
 }
 
 
-class stats {
-
-
-    stats(int no_genomes) {
-
+flat_hash_map<uint64_t, std::vector<uint32_t>> load_colors(string index_prefix) {
+    flat_hash_map<uint64_t, std::vector<uint32_t> > colors;
+    string inputFilename = index_prefix + "colors.intvectors";
+    ifstream input(inputFilename);
+    uint32_t size;
+    input >> size;
+    colors = flat_hash_map<uint64_t, std::vector<uint32_t> >(size);
+    for (int i = 0; i < size; i++) {
+        uint64_t color, colorSize;
+        input >> color >> colorSize;
+        uint32_t sampleID;
+        colors[color] = std::vector<uint32_t>(colorSize);
+        for (int j = 0; j < colorSize; j++) {
+            input >> sampleID;
+            colors[color][j] = sampleID;
+        }
     }
-
-};
-
+    return colors;
+}
 
 int main(int argc, char **argv) {
 
@@ -71,22 +81,26 @@ int main(int argc, char **argv) {
         throw std::runtime_error("Could not open kProcessor index file");
     }
 
+    // Run parameters
     int batchSize = 5000;
     int kSize = 25;
     int no_of_sequences;
 
+    // Counting total number of reads
     cerr << "counting number of reads ..." << endl;
     int count = 0;
     string line;
     ifstream file(PE_1_reads_file);
     while (getline(file, line)) count++;
 
+    // FASTA/FASTQ Detection
     if (PE_1_reads_file.find("fastq") != std::string::npos || PE_1_reads_file.find("fq") != std::string::npos) {
         no_of_sequences = count / 4;
     }else{
         no_of_sequences = count / 2;
     }
 
+    // Estimating the number of chunks
     int no_chunks = ceil((double) no_of_sequences / (double) batchSize);
     cerr << "processing " << no_of_sequences << " reads in " << no_chunks << " chunks ..." << endl;
 
@@ -97,10 +111,30 @@ int main(int argc, char **argv) {
 
     flat_hash_map<uint64_t, int> singleColors;
     vector<int> vec_singleColors;
-    for (auto const &color: ckf->namesMap) {
-        singleColors[color.first] = 1;
-        vec_singleColors.push_back(color.first);
+    flat_hash_map<uint64_t, string> color_to_groupString;
+    auto colorsIntVector = load_colors(index_prefix);
+    for(auto const & color : colorsIntVector){
+        uint64_t color_id = color.first;
+        auto all_group_ids = color.second;
+        if(all_group_ids.size() == 1){
+            vec_singleColors.push_back(color_id);
+            singleColors[color_id] = 1;
+            // color_to_groupString[color_id] = to_string(all_group_ids[0]);
+        }else{
+            string groups_string;
+            for(auto _grp_id : all_group_ids){
+                groups_string.append(to_string(_grp_id) + "-");
+            }
+            groups_string.pop_back();
+            color_to_groupString[color_id] = groups_string;
+        }
     }
+
+
+//    for (auto const &color: ckf->namesMap) {
+//        singleColors[color.first] = 1;
+//        vec_singleColors.push_back(color.first);
+//    }
 
     assert(kSize == (int) kf->getkSize());
     assert(kf->size() > 100);
@@ -117,13 +151,19 @@ int main(int argc, char **argv) {
     delete tmpReader;
 
 
-    // Output TSV file
+    // Output TSV file (Write headers ..)
     ofstream output("stats_" + index_prefix.substr(index_prefix.find_last_of("/\\") + 1) + ".tsv");
     for (auto const &color: vec_singleColors) {
         output << "uniq_genome_" << color << '\t';
     }
-    output << "ambiguous" << '\t' << "total_aligned" << '\t' << "unmapped" << '\n';
+    output << "total_ambiguous" << '\t' << "total_aligned" << '\t' << "unmapped" << '\t';
 
+    for(auto const & record : color_to_groupString){
+        output << "ambig(" + record.second + ")" << '\t';
+    }
+    output << '\n';
+
+    flat_hash_map<int, uint64_t> colors_count;
 
     while (!PEReader->end()) {
         std::chrono::high_resolution_clock::time_point _currentTime = std::chrono::high_resolution_clock::now();
@@ -133,6 +173,11 @@ int main(int argc, char **argv) {
         for (auto const &PE : *PEReader->next_chunk()) {
             vector<string> kmers;
 
+            flat_hash_map<uint64_t , uint32_t > color_to_ambiguous_count;
+
+            for(auto const & record : color_to_groupString){
+                color_to_ambiguous_count[record.first] = 0;
+            }
 
             flat_hash_map<int, int> uniqueCount;
             for (auto const &c : vec_singleColors) {
@@ -156,11 +201,13 @@ int main(int argc, char **argv) {
                 } else {
                     // Get the kmer color
                     uint64_t color = kf->getCount(kmer);
+                    colors_count[color]++;
 
                     // Check if the alignment is unique to one genome
                     if (singleColors[color]) {
                         uniqueCount[color]++;
                     } else if (color) {
+                        color_to_ambiguous_count[color]++;
                         ambiguous++;
                     } else {
                         unmapped++;
@@ -175,7 +222,12 @@ int main(int argc, char **argv) {
                 output << uniqueCount[color] << '\t';
                 total_aligned += uniqueCount[color];
             }
-            output << ambiguous << '\t' << total_aligned + ambiguous << '\t' << unmapped << '\n';
+            output << ambiguous << '\t' << total_aligned + ambiguous << '\t' << unmapped << '\t';
+            for(auto const & record : color_to_groupString){
+                output << color_to_ambiguous_count[record.first] << '\t';
+            }
+            output << '\n';
+
         }
 
         cerr << "Done in " << time_diff(_currentTime) << endl;

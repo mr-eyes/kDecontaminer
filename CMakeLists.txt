@@ -31,9 +31,9 @@ add_executable (peReadsStats reads_stats.cpp src/kseqReader.cpp)
 target_link_libraries (peReadsStats kProcessor z)
 target_include_directories(peReadsStats INTERFACE ${kProcessor_INCLUDE_PATH})
 
-#add_executable (analyzeIdx analyze_index.cpp)
-#target_link_libraries (analyzeIdx kProcessor z)
-#target_include_directories(analyzeIdx INTERFACE ${kProcessor_INCLUDE_PATH})
+add_executable (analyzeIdx analyze_index.cpp)
+target_link_libraries (analyzeIdx kProcessor z)
+target_include_directories(analyzeIdx INTERFACE ${kProcessor_INCLUDE_PATH})
 
 #add_executable (testKseq test_kseq.cpp)
 #target_link_libraries (testKseq z)
