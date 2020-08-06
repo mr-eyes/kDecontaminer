@@ -21,5 +21,5 @@ for genome_fasta in genomes:
     kp.countKmersFromFile(kf,{"mode":hashing_mode},genome_fasta, chunk_size)
     print(f"finished and counted {kf.size()} kmers...")
     print(f"saving ...")
-    output_prefix = os.path.join(output_directory, "idx_" + os.path.basename(genomes))
+    output_prefix = os.path.join(output_directory, "idx_" + os.path.basename(genome_fasta))
     kf.save(output_prefix)
