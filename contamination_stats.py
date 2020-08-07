@@ -13,7 +13,7 @@ kSize = 21
 chunk_size = 10000
 hashing_mode = 1 # Integer hashing
 
-reads_files = glob("f{reads_dir}/*")
+reads_files = glob(reads_dir + "/*")
 
 samples_kfs = dict()
 samples_total_kmer_count = dict()
