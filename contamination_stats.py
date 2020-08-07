@@ -32,10 +32,13 @@ intersection_count = dict()
 
 for genome_kf in genomes_kfs:
     kf_prefix = genome_kf.replace(".mqf","")
+    
+    print(f"Loading genome: {kf_prefix}")
     genome_kf = kp.kDataFrame.load(kf_prefix)
     
 
     for sample_name, readsKF in samples_kfs.items():
+        print(f"Processing read({sample_name} with genome({kf_prefix}))")
         intersection_kf = kp.kFrameIntersect([readsKF, genome_kf])
         intersection_count[tuple([sample_name, kf_prefix])] = intersection_kf.size()
 
