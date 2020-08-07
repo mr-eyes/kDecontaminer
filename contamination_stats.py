@@ -18,6 +18,7 @@ reads_files = glob("f{reads_dir}/*")
 samples_kfs = dict()
 samples_total_kmer_count = dict()
 
+print(f"reads files: {reads_files}")
 
 for readsFile in reads_files:
     file_name = os.path.basename(readsFile)
@@ -25,8 +26,11 @@ for readsFile in reads_files:
     kp.countKmersFromFile(samples_kfs[file_name] ,{"mode":hashing_mode},readsFile, chunk_size)
     samples_total_kmer_count[file_name] = samples_kfs[file_name].size()
 
+print("samples_kfs:", samples_kfs)
 
 genomes_kfs = glob(f"{genomes_dir}/idx_*.mqf")
+
+
 
 intersection_count = dict()
 
@@ -35,6 +39,7 @@ for genome_kf in genomes_kfs:
     
     print(f"Loading genome: {kf_prefix}")
     genome_kf = kp.kDataFrame.load(kf_prefix)
+    print(f"Genome: {kf_prefix} loaded with {genome_kf.size()} kmers..")
     
 
     for sample_name, readsKF in samples_kfs.items():
