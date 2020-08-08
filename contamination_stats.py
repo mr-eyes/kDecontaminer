@@ -25,12 +25,9 @@ for readsFile in reads_files:
     samples_kfs[file_name] = kp.kDataFrameMQF(kSize)
     kp.countKmersFromFile(samples_kfs[file_name] ,{"mode":hashing_mode},readsFile, chunk_size)
     samples_total_kmer_count[file_name] = samples_kfs[file_name].size()
-
-print("samples_kfs:", samples_kfs)
+    print(f"Sample: {file_name} loaded with {samples_kfs[file_name].size()} kmers")
 
 genomes_kfs = glob(f"{genomes_dir}/idx_*.mqf")
-
-
 
 intersection_count = dict()
 
@@ -46,6 +43,8 @@ for genome_kf in genomes_kfs:
         print(f"Processing read({sample_name} with genome({kf_prefix}))")
         intersection_kf = kp.kFrameIntersect([readsKF, genome_kf])
         intersection_count[tuple([sample_name, kf_prefix])] = intersection_kf.size()
+        print(f"shared number of kmers: {intersection_kf.size()}")
+        print("--" * 20)
 
 
 for record, count in intersection_count.items():
