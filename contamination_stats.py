@@ -26,7 +26,6 @@ genomes_names = list()
 samples_names = list()
 sample_kmers = dict()
 
-
 for sample in samples_kfs:
     sample = sample.replace(".mqf", '')
     tmp_kf = kp.kDataFrame.load(sample)
@@ -42,9 +41,11 @@ manager = MP.Manager()
 
 intersection_count = manager.list()
 
+print(f"job pairs: {job_pairs}")
 
 def get_intersection(pair):
     global intersection_count
+    print(f"processing ({pair})")
     sample_kf = kp.kDataFrame.load(pair[0])
     genome_kf = kp.kDataFrame.load(pair[1])
 
@@ -59,14 +60,13 @@ def get_intersection(pair):
     intersection_count.append((sample_name, genome_name, common_kmers, sample_kmers))
 
 
+print(f"Processing started ...")
 with MP.Pool(threads) as pool:
     pool.map(get_intersection, job_pairs)
-
 
 with open(f"{output_file}.pickle", "wb") as fp:
     pickle.dump(intersection_count, fp)
 print("dumped the result in pickle ...")
-
 
 intersection_by_genome = dict()
 
@@ -76,7 +76,6 @@ for _genome in genomes_names:
 for item in intersection_count:
     sample_name, genome_name, common_kmers, sample_kmers = item
     intersection_by_genome[genome_name][sample_name] = common_kmers
-
 
 with open(output_file, 'w') as OUT:
     header = str()
