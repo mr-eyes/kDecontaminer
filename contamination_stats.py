@@ -37,13 +37,9 @@ for sample in samples_kfs:
         genomes_names.append(os.path.basename(genome))
         job_pairs.append((sample, genome))
 
-print(f"sample kmers: {sample_kmers}")
-
 manager = MP.Manager()
 
 intersection_count = manager.list()
-
-print(f"job pairs: {job_pairs}")
 
 def get_intersection(pair):
     global intersection_count
