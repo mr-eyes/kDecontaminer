@@ -30,11 +30,11 @@ for sample in samples_kfs:
     sample = sample.replace(".mqf", '')
     tmp_kf = kp.kDataFrame.load(sample)
     sample_kmers[sample] = tmp_kf.size()
-    samples_names.append(sample)
+    samples_names.append(os.path.basename(sample))
 
     for genome in genome_kfs:
         genome = genome.replace(".mqf", '')
-        genomes_names.append(genome)
+        genomes_names.append(os.path.basename(genome))
         job_pairs.append((sample, genome))
 
 manager = MP.Manager()
