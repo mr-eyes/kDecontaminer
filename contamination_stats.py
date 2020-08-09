@@ -76,7 +76,7 @@ for _genome in genomes_names:
     intersection_by_genome[_genome] = dict()
 
 for item in intersection_count:
-    sample_name, genome_name, common_kmers, sample_kmers = item
+    sample_name, genome_name, common_kmers, unused_sample_kmers = item
     intersection_by_genome[genome_name][sample_name] = common_kmers
 
 with open(output_file, 'w') as OUT:
@@ -88,8 +88,6 @@ with open(output_file, 'w') as OUT:
     OUT.write(header[:-1] + '\n')
 
     for genome_name, sample_dict in intersection_by_genome.items():
-        print(f"genomeName: {genome_name}")
-        print(f"sample_dict: {sample_dict}")
         row = f"{genome_name}\t"
         for sample_name, common_kmers in sample_dict.items():
             containment = 100 * (common_kmers / sample_kmers[sample_name])
@@ -97,7 +95,6 @@ with open(output_file, 'w') as OUT:
 
         OUT.write(row[:-1] + '\n')
 
-print("Samples kmers")
-
+print("samples kmers:")
 for sample_name, kmers in sample_kmers.items():
-    print(f"sample({sample_name}): {kmers} kmers")
+    print(f"\tsample({sample_name}): {kmers} kmers")
