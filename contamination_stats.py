@@ -87,7 +87,7 @@ with open(output_file, 'w') as OUT:
         row = f"{genome_name}\t"
         for sample_name, common_kmers in sample_dict.items():
             containment = 100 * (common_kmers / sample_kmers[sample_name])
-            row += common_kmers + '\t'
+            row += '%' + str(containment) + '\t'
 
         OUT.write(row[:-1] + '\n')
 
