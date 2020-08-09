@@ -29,7 +29,7 @@ sample_kmers = dict()
 for sample in samples_kfs:
     sample = sample.replace(".mqf", '')
     tmp_kf = kp.kDataFrame.load(sample)
-    sample_kmers[sample] = tmp_kf.size()
+    sample_kmers[os.path.basename(sample)] = tmp_kf.size()
     samples_names.append(os.path.basename(sample))
 
     for genome in genome_kfs:
