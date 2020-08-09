@@ -28,8 +28,8 @@ sample_kmers = dict()
 
 
 for sample in samples_kfs:
-    tmp_kf = kp.kDataFrame.load(sample)
     sample = sample.replace(".mqf", '')
+    tmp_kf = kp.kDataFrame.load(sample)
     sample_kmers[sample] = tmp_kf.size()
     samples_names.append(sample)
 
