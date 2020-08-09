@@ -37,6 +37,8 @@ for sample in samples_kfs:
         genomes_names.append(os.path.basename(genome))
         job_pairs.append((sample, genome))
 
+print(f"sample kmers: {sample_kmers}")
+
 manager = MP.Manager()
 
 intersection_count = manager.list()
@@ -86,6 +88,8 @@ with open(output_file, 'w') as OUT:
     OUT.write(header[:-1] + '\n')
 
     for genome_name, sample_dict in intersection_by_genome.items():
+        print(f"genomeName: {genome_name}")
+        print(f"sample_dict: {sample_dict}")
         row = f"{genome_name}\t"
         for sample_name, common_kmers in sample_dict.items():
             containment = 100 * (common_kmers / sample_kmers[sample_name])
