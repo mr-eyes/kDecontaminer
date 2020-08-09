@@ -2,55 +2,99 @@ import kProcessor as kp
 from glob import glob
 import os
 import sys
+import multiprocessing as MP
+import pickle
 
-if len(sys.argv) < 3:
-    sys.exit("run: python genomes_kmerCounting.py <genomes_KFs_dir> <reads_cDBGs_dir>")
+if len(sys.argv) < 5:
+    sys.exit("run: python genomes_kmerCounting.py <genomes_KFs_dir> <reads_cDBGs_dir> <output_file> <threads>")
 
 genomes_dir = sys.argv[1]
 reads_dir = sys.argv[2]
+output_file = sys.argv[3] + ".tsv"
+threads = int(sys.argv[4])
 
 kSize = 21
 chunk_size = 10000
-hashing_mode = 1 # Integer hashing
+hashing_mode = 1  # Integer hashing
 
-reads_files = glob(reads_dir + "/*")
+samples_kfs = glob(reads_dir + "/*.mqf")
+genome_kfs = glob(genomes_dir + "/*.mqf")
 
-samples_kfs = dict()
-samples_total_kmer_count = dict()
+job_pairs = list()
 
-print(f"reads files: {reads_files}")
-
-for readsFile in reads_files:
-    file_name = os.path.basename(readsFile)
-    samples_kfs[file_name] = kp.kDataFrameMQF(kSize)
-    kp.countKmersFromFile(samples_kfs[file_name] ,{"mode":hashing_mode},readsFile, chunk_size)
-    samples_total_kmer_count[file_name] = samples_kfs[file_name].size()
-    print(f"Sample: {file_name} loaded with {samples_kfs[file_name].size()} kmers")
-
-genomes_kfs = glob(f"{genomes_dir}/idx_*.mqf")
-
-intersection_count = dict()
-
-for genome_kf in genomes_kfs:
-    kf_prefix = genome_kf.replace(".mqf","")
-    
-    print(f"Loading genome: {kf_prefix}")
-    genome_kf = kp.kDataFrame.load(kf_prefix)
-    print(f"Genome: {kf_prefix} loaded with {genome_kf.size()} kmers..")
-    
-
-    for sample_name, readsKF in samples_kfs.items():
-        print(f"Processing read({sample_name} with genome({kf_prefix}))")
-        intersection_kf = kp.kFrameIntersect([readsKF, genome_kf])
-        intersection_count[tuple([sample_name, kf_prefix])] = intersection_kf.size()
-        print(f"shared number of kmers: {intersection_kf.size()}")
-        print("--" * 20)
+genomes_names = list()
+samples_names = list()
+sample_kmers = dict()
 
 
-for record, count in intersection_count.items():
-    sample_name = record[0]
-    genome_name = record[1]
-    sample_kmers_count = samples_total_kmer_count[sample_name]
-    common_kmers = count
-    percentage = 100 * (count / sample_kmers_count)
-    print(f"Sample ({sample_name}) has ~{percentage:.2f}% matched kmers on Genome {genome_name}")
+for sample in samples_kfs:
+    tmp_kf = kp.kDataFrame.load(sample)
+    sample = sample.replace(".mqf", '')
+    sample_kmers[sample] = tmp_kf.size()
+    samples_names.append(sample)
+
+    for genome in genome_kfs:
+        genome = genome.replace(".mqf", '')
+        genomes_names.append(genome)
+        job_pairs.append((sample, genome))
+
+manager = MP.Manager()
+
+intersection_count = manager.list()
+
+
+def get_intersection(pair):
+    global intersection_count
+    sample_kf = kp.kDataFrame.load(pair[0])
+    genome_kf = kp.kDataFrame.load(pair[1])
+
+    intersection_kf = kp.kFrameIntersect([sample_kf, genome_kf])
+
+    common_kmers = intersection_kf.size()
+    sample_kmers = sample_kf.size()
+
+    sample_name = os.path.basename(pair[0])
+    genome_name = os.path.basename(pair[1])
+
+    intersection_count.append((sample_name, genome_name, common_kmers, sample_kmers))
+
+
+with MP.Pool(threads) as pool:
+    pool.map(get_intersection, job_pairs)
+
+
+with open(f"{output_file}.pickle", "wb") as fp:
+    pickle.dump(intersection_count, fp)
+print("dumped the result in pickle ...")
+
+
+intersection_by_genome = dict()
+
+for _genome in genomes_names:
+    intersection_by_genome[_genome] = dict()
+
+for item in intersection_count:
+    sample_name, genome_name, common_kmers, sample_kmers = item
+    intersection_by_genome[genome_name][sample_name] = common_kmers
+
+
+with open(output_file, 'w') as OUT:
+    header = str()
+    header += "ref.\t"
+    for sample_name, common_kmers in intersection_by_genome[genomes_names[0]].items():
+        sample = sample_name.replace(".mqf", '')
+        header += sample + '\t'
+    OUT.write(header[:-1] + '\n')
+
+    for genome_name, sample_dict in intersection_by_genome.items():
+        row = f"{genome_name}\t"
+        for sample_name, common_kmers in sample_dict.items():
+            containment = 100 * (common_kmers / sample_kmers[sample_name])
+            row += common_kmers + '\t'
+
+        OUT.write(row[:-1] + '\n')
+
+print("Samples kmers")
+
+for sample_name, kmers in sample_kmers.items():
+    print(f"sample({sample_name}): {kmers} kmers")
