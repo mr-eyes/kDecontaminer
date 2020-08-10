@@ -56,11 +56,18 @@ def get_intersection(pair):
     genome_name = os.path.basename(pair[1])
 
     intersection_count.append((sample_name, genome_name, common_kmers, sample_kmers))
+    print("---------------------------------")
+    print(pair)
+    print(sample_name, genome_name, common_kmers, sample_kmers)
+    print("---------------------------------")
 
 
 print(f"Processing started ...")
+
 with MP.Pool(threads) as pool:
     pool.map(get_intersection, job_pairs)
+    pool.close()
+    pool.join()
 
 with open(f"{output_file}.pickle", "wb") as fp:
     pickle.dump(intersection_count, fp)
