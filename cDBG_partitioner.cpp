@@ -223,6 +223,9 @@ int main(int argc, char **argv) {
 
     }
 
+    for(auto f : fasta_writer)
+        f.second->close();
+
 
     return 0;
 }
