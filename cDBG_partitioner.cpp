@@ -1,17 +1,15 @@
 #include "string"
 #include "kDataFrame.hpp"
-#include <glob.h>
-#include <sstream>
 #include <stdexcept>
 #include "tuple"
 #include <sys/stat.h>
-#include <fstream>
 #include "colored_kDataFrame.hpp"
 #include <zlib.h>
 #include <cstdio>
 #include "kseq.h"
 #include <iostream>
 #include <vector>
+#include <cassert>
 
 using namespace std;
 using namespace phmap;
@@ -100,10 +98,12 @@ flat_hash_map<uint64_t, std::vector<uint32_t>> load_colors(string index_prefix) 
     return colors;
 }
 
-string score(vector<uint32_t> &genomes) {
+tuple<string, vector<int>> score(vector<uint32_t> &genomes) {
+
+    vector<int> sources;
 
     if (genomes.empty())
-        return "unmapped";
+        return make_tuple("unmapped", sources);
 
     flat_hash_map<int, int> scores;
     flat_hash_map<int, int> reverse_scores;
@@ -123,10 +123,17 @@ string score(vector<uint32_t> &genomes) {
     auto max = std::max_element(all_scores.begin(), all_scores.end());
 
     if (countFreq[*max] == 1) {
-        return to_string(reverse_scores[*max]);
+        sources.emplace_back(reverse_scores[*max]);
+        return make_tuple("unique", sources);
     }
 
-    return "ambig";
+    for (const auto &score: scores) {
+        if (score.second == *max) {
+            sources.emplace_back(score.first);
+        }
+    }
+
+    return make_tuple("ambig", sources);;
 
 }
 
@@ -178,9 +185,7 @@ int main(int argc, char **argv) {
         fasta_writer[to_string(item)] = new fileHandler(file_name);
     }
 
-    string ambig_file_name = "ambig_partition.fa";
     string unmapped_file_name = "unmapped_partition.fa";
-    fasta_writer["ambig"] = new fileHandler(ambig_file_name);
     fasta_writer["unmapped"] = new fileHandler(unmapped_file_name);
 
     int chunkSize = 1000;
@@ -218,12 +223,22 @@ int main(int argc, char **argv) {
 
         }
 
-        string category = score(kmers_matches);
-        fasta_writer[category]->write(record);
+        auto category = score(kmers_matches);
+        if (get<0>(category) == "unmapped") {
+            fasta_writer["unmapped"]->write(record);
+        } else if (get<0>(category) == "unique") {
+            assert(get<1>(category).size() == 1);
+            fasta_writer[to_string(get<1>(category)[0])]->write(record);
+        } else if (get<0>(category) == "ambig") {
+            for (auto const &genomeID : get<1>(category)) {
+                fasta_writer[to_string(genomeID)]->write(record);
+            }
+        }
+
 
     }
 
-    for(auto f : fasta_writer)
+    for (auto f : fasta_writer)
         f.second->close();
 
 
