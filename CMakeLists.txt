@@ -39,6 +39,10 @@ add_executable (cDBG_partitioner cDBG_partitioner.cpp)
 target_link_libraries (cDBG_partitioner kProcessor z)
 target_include_directories(cDBG_partitioner INTERFACE ${kProcessor_INCLUDE_PATH})
 
+add_executable (fastq_partitioner fastq_partitioner.cpp)
+target_link_libraries (fastq_partitioner kProcessor z)
+target_include_directories(fastq_partitioner INTERFACE ${kProcessor_INCLUDE_PATH})
+
 #add_executable (testKseq test_kseq.cpp)
 #target_link_libraries (testKseq z)
 
