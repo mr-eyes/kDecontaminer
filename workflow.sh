@@ -1,5 +1,5 @@
 IDX_PREFIX="/groups/lorolab/mr-eyes/partitioning_cDBG_exp/idx_withContigs_MiltiSpecies.fa"
-#fastqPartitioner="/groups/lorolab/mr-eyes/oveview_exp/kDecontaminer/build/fastq_partitioner"
+fastqPartitioner="/groups/lorolab/mr-eyes/oveview_exp/kDecontaminer/build/fastq_partitioner"
 
 CURRENT=$(pwd)
 
