@@ -1,4 +1,3 @@
-#SAMPLES="Ast25B Ast26B Ast27B Ast28B Ast29B Ast30A Ast34D Ast35D Ast36C Ast42B Ast44B Ast45B AW2C AW3D AW8D"
 IDX_PREFIX="/groups/lorolab/mr-eyes/partitioning_cDBG_exp/idx_withContigs_MiltiSpecies.fa"
 #fastqPartitioner="/groups/lorolab/mr-eyes/oveview_exp/kDecontaminer/build/fastq_partitioner"
 
@@ -70,3 +69,24 @@ INDEXING=/groups/lorolab/mr-eyes/oveview_exp/kDecontaminer/indexing.py
 
 
 /usr/time/bin -v python ${INDEXING} allSamplesContigs_with_multiSpeciesGenomes.fa allSamplesContigs_with_multiSpeciesGenomes.fa.names 21
+
+
+# Reads partitioning
+
+SAMPLES="Ast25B Ast26B Ast27B Ast28B Ast29B Ast30A Ast34D Ast35D Ast36C Ast42B Ast44B Ast45B AW2C AW3D AW8D"
+
+mkdir reads_final_partitions && cd reads_final_partitions
+
+for SAMPLE in $SAMPLES;
+do
+    mkdir ${SAMPLE};
+    cd ${SAMPLE};
+    R1=${SAMPLES_DIR}/${SAMPLE}_R1_001.fastq.gz;
+    R2=${SAMPLES_DIR}/${SAMPLE}_R2_001.fastq.gz;
+    CMD="${fastqPartitioner} ${IDX_PREFIX} ${R1} ${R2}"
+    clusterize -d -nosub -n 1 ${CMD} > ${SAMPLE}_partitioning.qsub
+    qsub ${SAMPLE}_partitioning.qsub
+    cd ..
+done
+
+cd ..
