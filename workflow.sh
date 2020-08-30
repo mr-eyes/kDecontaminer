@@ -54,7 +54,7 @@ for GENOME_ID in 1 2 3 4 5 6 7;
 do
     originalCDBG=${groupNames[$GENOME_ID]}
     cat contigs_partitions/genome_${GENOME_ID}_partition.fa >> ${contigsFasta}
-    grep ">" contigs_partitions/genome_${GENOME_ID}_partition.fa | cut -c2- | awk -F' ' groupname=${originalCDBG} '{print $0"\t$groupname"}' >> ${contigsNames};
+    grep ">" contigs_partitions/genome_${GENOME_ID}_partition.fa | cut -c2- | awk -F' ' -v groupname=${originalCDBG} '{print $0"\t"groupname}' >> ${contigsNames};
 done;
 
 # Merging the contigs with the original cDBGs
