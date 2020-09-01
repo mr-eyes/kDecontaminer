@@ -200,6 +200,9 @@ int main(int argc, char **argv) {
 
     cout << "Processing started ..." << endl;
 
+    int total = 0;
+    int chunks = 0;
+
     for (int seqCounter = 0; kseq_read(kseqObj) >= 0; seqCounter++) {
 
         uint32_t seq_length = string(kseqObj->seq.s).size();
@@ -235,7 +238,10 @@ int main(int argc, char **argv) {
             }
         }
 
-
+        total++;
+        if (total == 5000){
+            cout << "processed: " << 1000 * ++chunks << "contigs" << endl;
+        }
     }
 
     for (auto f : fasta_writer)
