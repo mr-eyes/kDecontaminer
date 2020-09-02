@@ -202,9 +202,11 @@ int main(int argc, char **argv) {
 
     int total = 0;
     int chunks = 0;
+    uint64_t total_seqs = 0;
 
     for (int seqCounter = 0; kseq_read(kseqObj) >= 0; seqCounter++) {
-
+        total_seqs++;
+        continue;
         uint32_t seq_length = string(kseqObj->seq.s).size();
 
         if (seq_length < kSize) continue;
@@ -226,6 +228,8 @@ int main(int argc, char **argv) {
 
         }
 
+        uint64_t el = 0;
+
         auto category = score(kmers_matches);
         if (get<0>(category) == "unmapped") {
             fasta_writer["unmapped"]->write(record);
@@ -236,13 +240,19 @@ int main(int argc, char **argv) {
             for (auto const &genomeID : get<1>(category)) {
                 fasta_writer[to_string(genomeID)]->write(record);
             }
+        }else{
+            el++;
         }
 
         total++;
         if (total == 5000){
-            cout << "processed: " << 1000 * ++chunks << "contigs" << endl;
+            cout << "processed: " << 5000 * ++chunks << "contigs" << endl;
+            total =0;
         }
+
     }
+
+    cout << "Total seqs: " << total_seqs << endl;
 
     for (auto f : fasta_writer)
         f.second->close();
