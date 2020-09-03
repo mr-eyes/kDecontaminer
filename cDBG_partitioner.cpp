@@ -138,6 +138,7 @@ tuple<string, vector<int>> score(vector<uint32_t> &genomes) {
 }
 
 
+
 int main(int argc, char **argv) {
 
     if (argc != 3) {
@@ -203,7 +204,6 @@ int main(int argc, char **argv) {
     int total = 0;
     int chunks = 0;
 
-    uint64_t _else = 0;
     uint64_t _unique = 0;
     uint64_t _ambig = 0;
     uint64_t _unmatched = 0;
@@ -213,10 +213,12 @@ int main(int argc, char **argv) {
 
         std::string seq = kseqObj->seq.s;
         std::string id = kseqObj->name.s;
-        std::string record = ">" + id;
-        record += '\n';
-        record += seq;
-        record += '\n';
+
+        std::string record = ">";
+        record.append(id);
+        record.append("\n");
+        record.append(seq);
+        record.append("\n");
 
         vector<uint32_t> kmers_matches;
 
@@ -225,27 +227,26 @@ int main(int argc, char **argv) {
             for (const auto &genomeID : color_to_vecGroups[color]) {
                 kmers_matches.emplace_back(genomeID);
             }
-
         }
 
 
 
         auto category = score(kmers_matches);
-        if (get<0>(category) == "unmapped") {
+
+
+        if (get<0>(category) == "unique") {
+            _unique++;
+            fasta_writer[to_string(get<1>(category)[0])]->write(record);
+        }else if (get<0>(category) == "unmapped") {
             _unmatched++;
-//            fasta_writer["unmapped"]->write(record);
-        } else if (get<0>(category) == "unique") {
-              _unique++;
-//            assert(get<1>(category).size() == 1);
-            // fasta_writer[to_string(get<1>(category)[0])]->write(record);
+            fasta_writer["unmapped"]->write(record);
         } else if (get<0>(category) == "ambig") {
             _ambig++;
-//            for (auto const &genomeID : get<1>(category)) {
-//                fasta_writer[to_string(genomeID)]->write(record);
-//            }
-        }else{
-            _else++;
+            for (auto const &genomeID : get<1>(category)) {
+                fasta_writer[to_string(genomeID)]->write(record);
+            }
         }
+
 
         total++;
         if (total == 5000){
@@ -255,11 +256,9 @@ int main(int argc, char **argv) {
 
     }
 
-    cout << "else: "<<  _else << endl;
     cout << "_unique: "<<  _unique << endl;
     cout << "_ambig: "<<  _ambig << endl;
     cout << "_unmatched: "<<  _unmatched << endl;
-
 
     for (auto f : fasta_writer)
         f.second->close();
