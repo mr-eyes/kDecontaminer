@@ -133,7 +133,7 @@ tuple<string, vector<int>> score(vector<uint32_t> &genomes) {
         }
     }
 
-    return make_tuple("ambig", sources);;
+    return make_tuple("ambig", sources);
 
 }
 
@@ -202,14 +202,14 @@ int main(int argc, char **argv) {
 
     int total = 0;
     int chunks = 0;
-    uint64_t total_seqs = 0;
 
-    for (int seqCounter = 0; kseq_read(kseqObj) >= 0; seqCounter++) {
-        total_seqs++;
-        continue;
-        uint32_t seq_length = string(kseqObj->seq.s).size();
+    uint64_t _else = 0;
+    uint64_t _unique = 0;
+    uint64_t _ambig = 0;
+    uint64_t _unmatched = 0;
 
-        if (seq_length < kSize) continue;
+    while (kseq_read(kseqObj) >= 0) {
+        // if (string(kseqObj->seq.s).size() < kSize) continue;
 
         std::string seq = kseqObj->seq.s;
         std::string id = kseqObj->name.s;
@@ -228,20 +228,23 @@ int main(int argc, char **argv) {
 
         }
 
-        uint64_t el = 0;
+
 
         auto category = score(kmers_matches);
         if (get<0>(category) == "unmapped") {
-            fasta_writer["unmapped"]->write(record);
+            _unmatched++;
+//            fasta_writer["unmapped"]->write(record);
         } else if (get<0>(category) == "unique") {
-            assert(get<1>(category).size() == 1);
-            fasta_writer[to_string(get<1>(category)[0])]->write(record);
+              _unique++;
+//            assert(get<1>(category).size() == 1);
+            // fasta_writer[to_string(get<1>(category)[0])]->write(record);
         } else if (get<0>(category) == "ambig") {
-            for (auto const &genomeID : get<1>(category)) {
-                fasta_writer[to_string(genomeID)]->write(record);
-            }
+            _ambig++;
+//            for (auto const &genomeID : get<1>(category)) {
+//                fasta_writer[to_string(genomeID)]->write(record);
+//            }
         }else{
-            el++;
+            _else++;
         }
 
         total++;
@@ -252,7 +255,11 @@ int main(int argc, char **argv) {
 
     }
 
-    cout << "Total seqs: " << total_seqs << endl;
+    cout << "else: "<<  _else << endl;
+    cout << "_unique: "<<  _unique << endl;
+    cout << "_ambig: "<<  _ambig << endl;
+    cout << "_unmatched: "<<  _unmatched << endl;
+
 
     for (auto f : fasta_writer)
         f.second->close();
