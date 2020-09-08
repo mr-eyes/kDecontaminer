@@ -68,8 +68,10 @@ def get_intersection(pair):
 
 print(f"Processing started ...")
 
-with MP.Pool(threads) as pool:
+try:
+    pool = MP.Pool(threads)
     pool.map(get_intersection, job_pairs)
+finally:
     pool.close()
     pool.join()
 
