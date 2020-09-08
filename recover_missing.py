@@ -235,10 +235,7 @@ for sample, genome in job_pairs:
     else:
         tmp_job_pairs.append((sample, genome))
 
-print(tmp_job_pairs)
-print(len(tmp_job_pairs))
-
-exit()
+print(f"Processing remaning {len(tmp_job_pairs)} intersections")
 
 manager = MP.Manager()
 
@@ -272,7 +269,7 @@ print(f"Processing started ...")
 
 try:
     pool = MP.Pool(threads)
-    pool.map(get_intersection, job_pairs)
+    pool.map(get_intersection, tmp_job_pairs)
 finally:
     pool.close()
     pool.join()
