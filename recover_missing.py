@@ -227,6 +227,9 @@ tmp_job_pairs = list()
 
 for sample, genome in job_pairs:
     for finished_sample, finished_genome in finished:
+        print("-------------------------------------------------")
+        print(f"sample:{sample}, genome:{genome}")
+        print(f"finished_sample:{finished_sample}, finished_genome:{finished_genome}")
         if sample in finished_sample and genome in finished_genome:
             break
     else:
