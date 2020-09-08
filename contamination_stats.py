@@ -4,6 +4,7 @@ import os
 import sys
 import multiprocessing as MP
 import pickle
+import gc
 
 if len(sys.argv) < 5:
     sys.exit("run: python genomes_kmerCounting.py <genomes_KFs_dir> <reads_cDBGs_dir> <output_file> <threads>")
@@ -44,16 +45,32 @@ manager = MP.Manager()
 
 intersection_count = manager.list()
 
+preloaded_kfs = manager.dict()
+
+for genome in genome_kfs:
+    genome = genome.replace(".mqf", '')
+    print(f"loading {genome}")
+    preloaded_kfs[genome] = kp.kDataFrame.load(genome)
+
+for sample in samples_kfs:
+    sample = sample.replace(".mqf", '')
+    print(f"loading {sample}")
+    preloaded_kfs[sample] = kp.kDataFrame.load(sample)
+
+
 def get_intersection(pair):
     global intersection_count
-    print(f"processing ({pair})")
-    sample_kf = kp.kDataFrame.load(pair[0])
-    genome_kf = kp.kDataFrame.load(pair[1])
+    global preloaded_kfs
 
-    intersection_kf = kp.kFrameIntersect([sample_kf, genome_kf])
+    print(f"processing ({pair})")
+
+    sample_file = pair[0]
+    genome_file = pair[1]
+
+    intersection_kf = kp.kFrameIntersect([preloaded_kfs[sample_file], preloaded_kfs[genome_file]])
 
     common_kmers = intersection_kf.size()
-    sample_kmers = sample_kf.size()
+    sample_kmers = preloaded_kfs[sample_file].size()
 
     sample_name = os.path.basename(pair[0])
     genome_name = os.path.basename(pair[1])
@@ -64,6 +81,8 @@ def get_intersection(pair):
     print(sample_name, genome_name, common_kmers, sample_kmers)
     print("---------------------------------")
 
+    del intersection_kf
+    gc.collect()
 
 print(f"Processing started ...")
 
