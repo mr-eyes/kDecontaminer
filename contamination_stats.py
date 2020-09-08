@@ -26,8 +26,11 @@ genomes_names = list()
 samples_names = list()
 sample_kmers = dict()
 
+_sample_counter = 1
+
 for sample in samples_kfs:
     sample = sample.replace(".mqf", '')
+    print(f"Getting sample {sample} ({_sample_counter}) kmers")
     tmp_kf = kp.kDataFrame.load(sample)
     sample_kmers[os.path.basename(sample)] = tmp_kf.size()
     samples_names.append(os.path.basename(sample))
