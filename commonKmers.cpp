@@ -75,7 +75,7 @@ int main(int argc, char ** argv){
     ofstream fs;
     string output_file_name = "contamStats_" + genome_basename + "-" + sample_basename + ".tsv";
     fs.open(output_file_name);
-    fs << genome_basename << '\t' << sample_basename << '\t' << commonKmers << '\t' << sample_kmers << 't' << percentage << endl;
+    fs << genome_basename << '\t' << sample_basename << '\t' << commonKmers << '\t' << sample_kmers << '\t' << percentage << endl;
     fs.close();
 
 }
