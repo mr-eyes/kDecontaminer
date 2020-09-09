@@ -1,11 +1,11 @@
-
+import sys
 intersection_count= list()
 
 genomes_names = set()
 samples_names = set()
 samples_kmers = dict()
-
-with open("allSamples.tsv") as stats:
+#with open("allSamples.tsv") as stats:
+with open(sys.argv[1]) as stats:
     next(stats)
     for line in stats:
         line = line.strip().split('\t')
@@ -30,7 +30,7 @@ for item in intersection_count:
 
 print(intersection_by_genome)
 
-with open("transformed_allSamples.tsv", 'w') as OUT:
+with open("transformed_" + sys.argv[1], 'w') as OUT:
     header = str()
     header += "ref.\t"
     for sample_name, common_kmers in intersection_by_genome[genomes_names[0]].items():
