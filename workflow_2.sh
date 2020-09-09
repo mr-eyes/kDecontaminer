@@ -1,4 +1,3 @@
-fastqPartitioner="/groups/lorolab/mr-eyes/oveview_exp/kDecontaminer/build/fastq_partitioner"
 
 CURRENT=$(pwd)
 
@@ -7,7 +6,7 @@ CURRENT=$(pwd)
 
 
 KMER_SIZE=75
-MIN_ABUNDANCE=2
+MIN_ABUNDANCE=1
 MAX_RAM_MB=50000
 THREADS=5
 GENOMES_DIR="/groups/lorolab/Tamer/7genomes"
@@ -71,6 +70,18 @@ do
     cd ..
 done
 
+# cDBG Partitioning only (optional)
+
+for SAMPLE in $SAMPLES;
+do
+    cd ${SAMPLE};
+    OUTPUT_PREFIX=cDBG_k${KMER_SIZE}_${SAMPLE}
+    CMD2="/usr/bin/time -v ${cDBG_partitioner} ${OUTPUT_PREFIX}.unitigs.fa ${IDX_PREFIX}"
+    clusterize -d -nosub -n 1 "${CMD2}" > ${SAMPLE}_partitioning.qsub
+    qsub ${SAMPLE}_partitioning.qsub
+    cd ..
+done
+
 cd ..
 
 
@@ -106,13 +117,8 @@ for SAMPLE in $SAMPLES;
       do
           echo "Processing Genome ${GENOME_ID}"
           originalCDBG=${groupNames[$GENOME_ID]}
-
-          grep -v "^>" ${SAMPLE}/genome_${GENOME_ID}_partition.fa | while read -r seq;
-            do
-              echo -e ">${CONTIGS_COUNTER}\n$seq" >> ${contigsFasta}
-              echo -e "$CONTIGS_COUNTER\t${originalCDBG}" >> ${contigsNames};
-              ((CONTIGS_COUNTER=CONTIGS_COUNTER+1))
-          done;
+          cat ${SAMPLE}/genome_${GENOME_ID}_partition.fa | awk 'BEGIN{OFS="\n";}!/^>/{print ">"NR/2,$0}' >> ${contigsFasta}
+          cat ${SAMPLE}/genome_${GENOME_ID}_partition.fa | awk -v seqName=$originalCDBG 'BEGIN{OFS="\t";}!/^>/{print NR/2,seqName}' >> ${contigsNames}
     done;
 done;
 
@@ -129,17 +135,23 @@ INDEXING=/groups/lorolab/mr-eyes/oveview_exp/kDecontaminer/indexing.py
 
 /usr/time/bin -v python ${INDEXING} allSamplesContigs_with_multiSpeciesGenomes.fa allSamplesContigs_with_multiSpeciesGenomes.fa.names 21
 
+FULL_IDX_PREFIX=/groups/lorolab/mr-eyes/final_experiment/idx_allSamples_with_7Genomes.fa
+
+
+# ----------------------------------------------------------------------------------
 
 # Reads partitioning
 
 SAMPLES="Ast25B Ast26B Ast27B Ast28B Ast29B Ast30A Ast34D Ast35D Ast36C Ast42B Ast44B Ast45B AW2C AW3D AW8D"
+SAMPLES_DIR="/groups/lorolab/Astrangia/Astrangia2019"
+fastqPartitioner="/groups/lorolab/mr-eyes/oveview_exp/kDecontaminer/build/fastq_partitioner"
 
-mkdir reads_final_partitions && cd reads_final_partitions
+
+mkdir reads_partitions && cd reads_partitions
 
 for SAMPLE in $SAMPLES;
 do
-    mkdir ${SAMPLE};
-    cd ${SAMPLE};
+    mkdir ${SAMPLE} && cd ${SAMPLE}
     R1=${SAMPLES_DIR}/${SAMPLE}_R1_001.fastq.gz;
     R2=${SAMPLES_DIR}/${SAMPLE}_R2_001.fastq.gz;
     CMD="${fastqPartitioner} ${IDX_PREFIX} ${R1} ${R2}"
@@ -149,3 +161,137 @@ do
 done
 
 cd ..
+
+# -------------------------------------------------------------------------------------
+
+# merging samples (STILL DEVELOPMENT)
+
+genome_${GENOME_ID}_readsPartition_R1.fastq
+genome_${GENOME_ID}_readsPartition_R2.fastq
+
+for GENOME_ID in 1 2 3 4 5 6 7;
+do
+    touch decontaminated_genome_${GENOME_ID}_R1.fastq
+    touch decontaminated_genome_${GENOME_ID}_R2.fastq
+done
+
+for SAMPLE in $SAMPLES;
+  do
+    echo "Processing $SAMPLE"
+    for GENOME_ID in 1 2 3 4 5 6 7;
+      do
+          echo "Processing Genome ${GENOME_ID}"
+          originalCDBG=${groupNames[$GENOME_ID]}
+          cat ${SAMPLE}/genome_${GENOME_ID}_readsPartition_R1.fastq | awk 'BEGIN{OFS="\n";}!/^>/{print ">"NR/2,$0}' >> decontaminated_genome_${GENOME_ID}_R1.fastq
+          cat ${SAMPLE}/genome_${GENOME_ID}_readsPartition_R1.fastq | awk 'BEGIN{OFS="\n";}!/^>/{print ">"NR/2,$0}' >> decontaminated_genome_${GENOME_ID}_R1.fastq
+    done;
+done;
+
+
+# -----------------------------------------------
+
+# Generate Summary stats TSV
+
+SAMPLES="Ast25B Ast26B Ast27B Ast28B Ast29B Ast30A Ast34D Ast35D Ast36C Ast42B Ast44B Ast45B AW2C AW3D AW8D"
+SAMPLES_ORIGINAL_DIR="/groups/lorolab/Astrangia/Astrangia2019"
+SAMPLES_OUTPUT_DIR="/groups/lorolab/mr-eyes/final_experiment/reads_partitions"
+
+SUMMARY_TSV="partitioning_summary.tsv"
+touch ${SUMMARY_TSV}
+printf "sample\ttotal" >> ${SUMMARY_TSV}
+
+for i in 1 2 3 4 5 6 7
+do  
+    printf "\tgenome_${i}" >> ${SUMMARY_TSV}
+done
+
+printf "\tunmapped\n" >> ${SUMMARY_TSV}
+
+
+for SAMPLE in $SAMPLES
+do 
+    TSV_LINE="${SAMPLE}\t"
+    echo "Processing ${SAMPLE}"
+    ORIGINAL_GENOME_LINES=$(zcat ${SAMPLES_ORIGINAL_DIR}/${SAMPLE}_R1_001.fastq.gz | wc -l)
+    GENOMES_SEQS=$((ORIGINAL_GENOME_LINES / 4))
+    TSV_LINE+="${GENOMES_SEQS}"
+    for GENOME_ID in 1 2 3 4 5 6 7
+    do      
+            echo "Processing ${SAMPLE}/${GENOME_ID}"
+            PARTITION_LINES=$(cat ${SAMPLES_OUTPUT_DIR}/${SAMPLE}/genome_${GENOME_ID}_readsPartition_R1.fastq | wc -l)
+            PARTITION_SEQS=$((PARTITION_LINES / 4))
+            TSV_LINE+="\t${PARTITION_SEQS}"
+    done
+    UNMAPPED_LINES=$(cat ${SAMPLES_OUTPUT_DIR}/${SAMPLE}/unmapped_partition.fa_R1.fastq | wc -l)
+    UNMAPPED_SEQS=$((UNMAPPED_LINES / 4))
+    printf "${TSV_LINE}\t${UNMAPPED_SEQS}\n" >> ${SUMMARY_TSV}
+done
+
+
+
+# ------------------------------------------------------------------------------
+
+# TRIMMING
+
+adap="$CONDA_PREFIX/share/trimmomatic-0.39-1/adapters"
+SAMPLES="Ast25B Ast26B Ast27B Ast28B Ast29B Ast30A Ast34D Ast35D Ast36C Ast42B Ast44B Ast45B AW2C AW3D AW8D"
+SAMPLES_OUTPUT_DIR="/groups/lorolab/mr-eyes/final_experiment/reads_partitions"
+
+mkdir -p trimmed_reads && cd trimmed_reads
+
+for SAMPLE in $SAMPLES;
+    do
+        mkdir -p $SAMPLE && cd $SAMPLE
+        echo "Processing $SAMPLE"
+        for GENOME_ID in 1 2 3 4 5 6 7;
+        do
+            R1=${SAMPLES_OUTPUT_DIR}/${SAMPLE}/genome_${GENOME_ID}_readsPartition_R1.fastq
+            R2=${SAMPLES_OUTPUT_DIR}/${SAMPLE}/genome_${GENOME_ID}_readsPartition_R2.fastq
+
+            OP_R1_SE=trimmed_genome_${GENOME_ID}_readsPartition_R1_SE.fastq
+            OP_R2_SE=trimmed_genome_${GENOME_ID}_readsPartition_R2_SE.fastq
+            OP_R1_PE=trimmed_genome_${GENOME_ID}_readsPartition_R1_PE.fastq
+            OP_R2_PE=trimmed_genome_${GENOME_ID}_readsPartition_R2_PE.fastq
+
+            CMD="trimmomatic PE -threads 4 -phred33 ${R1} ${R2} ${OP_R1_PE} ${OP_R1_SE} ${OP_R2_PE} ${OP_R2_SE} ILLUMINACLIP:${adap}/TruSeq3-PE-2.fa:2:30:10:1 SLIDINGWINDOW:4:2 MINLEN:25"
+            clusterize -d -nosub -n 4 ${CMD} > ${SAMPLE}_trimmomatic.qsub
+            qsub ${SAMPLE}_trimmomatic.qsub
+        done;
+        cd ..
+done;
+
+# -----------------------------------------------------------
+# Compressing fastq files to save disk space
+
+
+SAMPLES="Ast25B Ast26B Ast27B Ast28B Ast29B Ast30A Ast34D Ast35D Ast36C Ast42B Ast44B Ast45B AW2C AW3D AW8D"
+TRIMMED_SAMPLES_DIR="/groups/lorolab/mr-eyes/final_experiment/trimmed_reads"
+
+for SAMPLE in $SAMPLES;
+do
+    echo "Gzipping $SAMPLE";
+    clusterize -d -n 1 gzip "$SAMPLE/*fastq"
+done
+
+
+# -----------------------------------------------------------
+# Assembly (Trinity)
+
+SAMPLES="Ast25B Ast26B Ast27B Ast28B Ast29B Ast30A Ast34D Ast35D Ast36C Ast42B Ast44B Ast45B AW2C AW3D AW8D"
+TRIMMED_SAMPLES_DIR="/groups/lorolab/mr-eyes/final_experiment/trimmed_reads"
+# MERGED_SE_FILES=${TRIMMED_SAMPLES_DIR}/all_trimmed_SE.fastq
+THREADS=32
+
+TRINITY_CMD="Trinity --seqType fq --CPU 32--max_memory 400G --left  --right "
+
+
+for SAMPLE in $SAMPLES;
+do
+    cd $SAMPLE
+    
+    for GENOME_ID in 1; # Just the apoculata
+    do
+        
+    done
+    cd ..
+done
