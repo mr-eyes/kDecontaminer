@@ -51,6 +51,7 @@ int main(int argc, char ** argv){
     // Loading sample KF
     string samples_file = argv[2];
     eraseSubStr(samples_file, ".mqf");
+    cout << "Loading " << samples_file << endl;
     string sample_basename = base_name(samples_file);
     cerr << "Loading Sample KF ... ";
     auto sampleKF = kDataFrame::load(samples_file);
@@ -77,5 +78,4 @@ int main(int argc, char ** argv){
     fs.open(output_file_name);
     fs << genome_basename << '\t' << sample_basename << '\t' << commonKmers << '\t' << sample_kmers << '\t' << percentage << endl;
     fs.close();
-
 }
