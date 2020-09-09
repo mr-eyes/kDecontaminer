@@ -40,51 +40,40 @@ std::string base_name(std::string const & path)
 
 int main(int argc, char ** argv){
 
+    // Loading genome KF
     string genome_prefix = argv[1];
     eraseSubStr(genome_prefix, ".mqf");
+    string genome_basename = base_name(genome_prefix);
     cerr << "Loading genome KF ... ";
     auto genomeKF = kDataFrame::load(genome_prefix);
     cerr << "[DONE]" << endl;
 
-    vector<string> samples_files;
-    map<string, uint32_t> sample_to_commonKmers;
+    // Loading sample KF
+    string samples_file = argv[2];
+    eraseSubStr(samples_file, ".mqf");
+    string sample_basename = base_name(samples_file);
+    cerr << "Loading Sample KF ... ";
+    auto sampleKF = kDataFrame::load(samples_file);
+    cerr << "[DONE]" << endl;
+
+    uint64_t sample_kmers = kf_size(sampleKF);
+
+    // Getting Intersection
+    cerr << "calculating common kmers ("<< sample_basename << " & " << genome_prefix <<") ... ";
+    auto commonKmersKF = kProcessor::kFrameIntersect({sampleKF, genomeKF});
+    cerr << "[DONE]" << endl;
+    uint64_t commonKmers = kf_size(commonKmersKF);
+    double percentage = 100 * ((double)commonKmers / (double)sample_kmers);
 
 
-    for(int i = 2; i < argc; i++){
-        string sample_name = argv[i];
-        eraseSubStr(sample_name, ".mqf");
-        samples_files.emplace_back(sample_name);
-    }
+    // Writing results
+    cout << genome_basename << '\t' << sample_basename << '\t' << commonKmers << '\t' << sample_kmers << 't' << percentage << endl;
+    cerr << "Writing results to " << "contamStats_" + genome_basename + "-" + sample_basename + ".tsv" << " ..." << endl;
 
-
-    for(auto const & sampleFile : samples_files){
-        auto kf = kDataFrame::load(sampleFile);
-        cerr << "calculating common kmers ("<< sampleFile <<"&"<< genome_prefix <<") ... ";
-        auto commonKmersKF = kProcessor::kFrameIntersect({kf, genomeKF});
-        cerr << "[DONE]" << endl;
-        uint64_t intersection = kf_size(commonKmersKF);
-        sample_to_commonKmers[sampleFile] = intersection;
-    }
-    
-    string genome_basename = base_name(genome_prefix);
-    cerr << "Wriring results to " << "contamStats_" + genome_basename + ".tsv" << " ..." << endl;
     ofstream fs;
     string output_file_name = "contamStats_" + genome_basename + ".tsv";
     fs.open(output_file_name);
-    fs << "ref";
-
-    for(auto const & sample : sample_to_commonKmers){
-        fs << '\t' + sample.first;
-    }
-
-    fs << '\n';
-
-    fs << genome_prefix;
-    for(auto const & sample : sample_to_commonKmers){
-        fs << '\t' + sample.second;
-    }
-    fs << '\n';
+    fs << genome_basename << '\t' << sample_basename << '\t' << commonKmers << '\t' << sample_kmers << 't' << percentage << endl;
     fs.close();
-
 
 }
