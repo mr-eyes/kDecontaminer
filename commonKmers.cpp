@@ -7,6 +7,7 @@
 #include "colored_kDataFrame.hpp"
 #include <vector>
 #include <map>
+#include <fstream>
 
 using namespace std;
 
