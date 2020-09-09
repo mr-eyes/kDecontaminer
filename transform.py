@@ -1,4 +1,5 @@
 import sys
+import os
 intersection_count= list()
 
 genomes_names = set()
@@ -30,7 +31,7 @@ for item in intersection_count:
 
 print(intersection_by_genome)
 
-with open("transformed_" + sys.argv[1], 'w') as OUT:
+with open("transformed_" + os.path.basename(sys.argv[1]), 'w') as OUT:
     header = str()
     header += "ref.\t"
     for sample_name, common_kmers in intersection_by_genome[genomes_names[0]].items():
