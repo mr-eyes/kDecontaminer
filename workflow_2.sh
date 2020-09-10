@@ -1,3 +1,7 @@
+############ Run the containment screening test
+bash contamination_screen.sh
+
+## Download candidate genomes
 mkdir -p /groups/lorolab/Tamer/
 cd /groups/lorolab/Tamer/
 wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/091/205/GCF_000091205.1_ASM9120v1/GCF_000091205.1_ASM9120v1_genomic.fna.gz
@@ -6,17 +10,13 @@ wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/151/355/GCF_000151355.1_v2
 
 gunzip *gz
 
-# Move genomes of interest into /groups/lorolab/Tamer/7genomes
-mv *gz 7genomes/
-cd 7genomes/ && gunzip *gz
-
-# cDBG for genomes @ k75
-
+################## kmer containment test
+# cDBG for genomes @ k75 and min_ab 1
 KMER_SIZE=75
 MIN_ABUNDANCE=1
 MAX_RAM_MB=50000
 THREADS=5
-GENOMES_DIR="/groups/lorolab/Tamer/7genomes"
+GENOMES_DIR="/groups/lorolab/Tamer"
 
 mkdir genomes_cDBGs && cd genomes_cDBGs
 
@@ -36,20 +36,8 @@ done
 
 cd ..
 
-
 # -------------------------------------------------------------------------------------------
-
-# ----------- genomes_cDBG Indexing ----------------------
-
-cd genomes_cDBGs
-python /groups/lorolab/mr-eyes/oveview_exp/kDecontaminer/unitigsTokProcessorFormat.py multiSpecies_7_k75 */*fa
-clusterize -d -nosub -n 1 python /groups/lorolab/mr-eyes/oveview_exp/kDecontaminer/indexing.py multiSpecies_7_k75.fa multiSpecies_7_k75.fa.names 21 > indexing_multiSpecies.qsub
-qsub indexing_multiSpecies.qsub
-IDX_PREFIX="/groups/lorolab/mr-eyes/final_experiment/genomes_cDBGs/idx_multiSpecies_7_k75.fa"
-
-# -------------------------------------------------------------------------------------------
-
-# Samples cDBG creation & partitioning
+# Samples cDBG creation @ k75 and min_ab 2
 
 KMER_SIZE=75
 MIN_ABUNDANCE=2
@@ -76,23 +64,8 @@ do
     cd ..
 done
 
-# cDBG Partitioning
-
-for SAMPLE in $SAMPLES;
-do
-    cd ${SAMPLE};
-    OUTPUT_PREFIX=cDBG_k${KMER_SIZE}_${SAMPLE}
-    CMD2="/usr/bin/time -v ${cDBG_partitioner} ${OUTPUT_PREFIX}.unitigs.fa ${IDX_PREFIX}"
-    clusterize -d -nosub -n 1 "${CMD2}" > ${SAMPLE}_partitioning.qsub
-    qsub ${SAMPLE}_partitioning.qsub
-    cd ..
-done
-
-cd ..
-
 # -------------------------------------------------------------------------------------------
-
-######## Contamination stats generation
+# kmer counting 
 
 cd /groups/lorolab/mr-eyes/oveview_exp
 SAMPLES="Ast25B Ast26B Ast27B Ast28B Ast29B Ast30A Ast34D Ast35D Ast36C Ast42B Ast44B Ast45B AW2C AW3D AW8D"
@@ -146,6 +119,34 @@ cat contamStats*tsv >> detailed_Contamination_report.tsv
 python /groups/lorolab/mr-eyes/oveview_exp/kDecontaminer/transform.py detailed_Contamination_report.tsv
 
 
+## ----------- genomes_cDBG Indexing ----------------------
+# Move genomes of interest into /groups/lorolab/Tamer/7genomes
+mv *gz 7genomes/
+cd 7genomes/ && gunzip *gz
+
+
+cd genomes_cDBGs
+python /groups/lorolab/mr-eyes/oveview_exp/kDecontaminer/unitigsTokProcessorFormat.py multiSpecies_7_k75 */*fa
+clusterize -d -nosub -n 1 python /groups/lorolab/mr-eyes/oveview_exp/kDecontaminer/indexing.py multiSpecies_7_k75.fa multiSpecies_7_k75.fa.names 21 > indexing_multiSpecies.qsub
+qsub indexing_multiSpecies.qsub
+IDX_PREFIX="/groups/lorolab/mr-eyes/final_experiment/genomes_cDBGs/idx_multiSpecies_7_k75.fa"
+
+# -------------------------------------------------------------------------------------------
+
+
+# cDBG Partitioning
+
+for SAMPLE in $SAMPLES;
+do
+    cd ${SAMPLE};
+    OUTPUT_PREFIX=cDBG_k${KMER_SIZE}_${SAMPLE}
+    CMD2="/usr/bin/time -v ${cDBG_partitioner} ${OUTPUT_PREFIX}.unitigs.fa ${IDX_PREFIX}"
+    clusterize -d -nosub -n 1 "${CMD2}" > ${SAMPLE}_partitioning.qsub
+    qsub ${SAMPLE}_partitioning.qsub
+    cd ..
+done
+
+cd ..
 
 # -------------------------------------------------------------------------------------------
 
