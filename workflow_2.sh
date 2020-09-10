@@ -1,9 +1,16 @@
+mkdir -p /groups/lorolab/Tamer/
+cd /groups/lorolab/Tamer/
+wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/091/205/GCF_000091205.1_ASM9120v1/GCF_000091205.1_ASM9120v1_genomic.fna.gz
+wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/149/645/GCF_000149645.2_ASM14964v3/GCF_000149645.2_ASM14964v3_genomic.fna.gz
+wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/151/355/GCF_000151355.1_v2.0/GCF_000151355.1_v2.0_genomic.fna.gz
 
-CURRENT=$(pwd)
+gunzip *gz
 
+# Move genomes of interest into /groups/lorolab/Tamer/7genomes
+mv *gz 7genomes/
+cd 7genomes/ && gunzip *gz
 
 # cDBG for genomes @ k75
-
 
 KMER_SIZE=75
 MIN_ABUNDANCE=1
@@ -63,14 +70,13 @@ do
     OUTPUT_PREFIX=cDBG_k${KMER_SIZE}_${SAMPLE}
     ls -1 ${SAMPLES_DIR}/${SAMPLE}*fastq.gz > reads_${SAMPLE}
     CMD1="bcalm -kmer-size ${KMER_SIZE} -nb-cores ${THREADS} -max-memory ${MAX_RAM_MB} -abundance-min ${MIN_ABUNDANCE} -out ${OUTPUT_PREFIX} -in reads_${SAMPLE}"
-    CMD2="/usr/bin/time -v ${cDBG_partitioner} ${OUTPUT_PREFIX}.unitigs.fa ${IDX_PREFIX}"
-    clusterize -d -nosub -n ${THREADS} "${CMD1} && ${CMD2}" > ${SAMPLE}_bcalm.qsub
+    clusterize -d -nosub -n ${THREADS} "${CMD1}" > ${SAMPLE}_bcalm.qsub
     qsub ${SAMPLE}_bcalm.qsub
     rm -rf *h5
     cd ..
 done
 
-# cDBG Partitioning only (optional)
+# cDBG Partitioning
 
 for SAMPLE in $SAMPLES;
 do
@@ -83,6 +89,62 @@ do
 done
 
 cd ..
+
+# -------------------------------------------------------------------------------------------
+
+######## Contamination stats generation
+
+cd /groups/lorolab/mr-eyes/oveview_exp
+SAMPLES="Ast25B Ast26B Ast27B Ast28B Ast29B Ast30A Ast34D Ast35D Ast36C Ast42B Ast44B Ast45B AW2C AW3D AW8D"
+SAMPLES_DIR="/groups/lorolab/mr-eyes/final_experiment/samples_cDBGs"
+OUTPUT_DIR="/groups/lorolab/mr-eyes/oveview_exp/samples_kfs"
+kmerCount="/groups/lorolab/mr-eyes/oveview_exp/kDecontaminer/kmerCount.py"
+
+
+for SAMPLE in $SAMPLES;
+do 
+    CMD="python $kmerCount $SAMPLES_DIR/$SAMPLE/cDBG_k75_$SAMPLE.unitigs.fa $OUTPUT_DIR";
+    clusterize -d -n 2 "${CMD}"; 
+done
+
+
+GENOMES_KFS=/groups/lorolab/mr-eyes/oveview_exp/genomes_kf
+GENOMES_DIR=/groups/lorolab/mr-eyes/final_experiment/genomes_cDBGs/*unitigs.fasta
+for GENOME in $GENOMES;
+do 
+    CMD="python $kmerCount $GENOME $GENOMES_KFS";
+    clusterize -d -n 2 "${CMD}"; 
+done
+
+
+# --------------------------------------------------
+# Contamnination study
+
+SAMPLES="Ast25B Ast26B Ast27B Ast28B Ast29B Ast30A Ast34D Ast35D Ast36C Ast42B Ast44B Ast45B AW2C AW3D AW8D"
+OUTPUT_DIR="/groups/lorolab/mr-eyes/oveview_exp/samples_kfs"
+
+commonKmers="/groups/lorolab/mr-eyes/oveview_exp/kDecontaminer/build/commonKmers"
+GENOMES_KFS=/groups/lorolab/mr-eyes/oveview_exp/genomes_kf/*mqf
+
+OUT_TSV="contamination_report.tsv"
+
+touch $OUT_TSV
+echo -e "ref\tsample\tcommon_kmers\tsamples_kmers\tcontainment_percentage" >> $OUT_TSV
+
+for GENOME in $GENOMES_KFS;
+do  
+    for SAMPLE in $SAMPLES;
+    do 
+        CMD="$commonKmers $GENOME $OUTPUT_DIR/idx_cDBG_k75_$SAMPLE.unitigs.fa.mqf >> $OUT_TSV"
+        clusterize -d -n 1 "${CMD}"; 
+    done 
+done
+
+touch detailed_Contamination_report.tsv
+echo -e "ref\tsample\tcommon_kmers\tsamples_kmers\tcontainment_percentage" >> detailed_Contamination_report.tsv
+cat contamStats*tsv >> detailed_Contamination_report.tsv
+python /groups/lorolab/mr-eyes/oveview_exp/kDecontaminer/transform.py detailed_Contamination_report.tsv
+
 
 
 # -------------------------------------------------------------------------------------------
@@ -190,7 +252,7 @@ done;
 
 # -----------------------------------------------
 
-# Generate Summary stats TSV
+# Generate lengths summary stats TSV
 
 SAMPLES="Ast25B Ast26B Ast27B Ast28B Ast29B Ast30A Ast34D Ast35D Ast36C Ast42B Ast44B Ast45B AW2C AW3D AW8D"
 SAMPLES_ORIGINAL_DIR="/groups/lorolab/Astrangia/Astrangia2019"
