@@ -10,7 +10,7 @@ with open(sys.argv[1]) as stats:
     next(stats)
     for line in stats:
         line = line.strip().split('\t')[:4] # make sure they are only 4
-        sample_name, genome_name, common_kmers, sample_kmers = tuple(line)
+        genome_name, sample_name, common_kmers, sample_kmers = tuple(line)
         print(sample_name, genome_name, common_kmers, sample_kmers)
         intersection_count.append((sample_name, genome_name, int(common_kmers), int(sample_kmers)))
         genomes_names.add(genome_name)
