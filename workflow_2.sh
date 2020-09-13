@@ -126,7 +126,7 @@ cd 9genomes/ && gunzip *gz
 
 
 cd genomes_cDBGs
-python /groups/lorolab/mr-eyes/oveview_exp/kDecontaminer/unitigsTokProcessorFormat.py multiSpecies_9_k75 */*fa
+python /groups/lorolab/mr-eyes/oveview_exp/kDecontaminer/unitigsTokProcessorFormat.py multiSpecies_9_k75 9genomes/*fa
 clusterize -d -nosub -n 8 python /groups/lorolab/mr-eyes/oveview_exp/kDecontaminer/indexing.py multiSpecies_9_k75.fa multiSpecies_9_k75.fa.names 21 > indexing_multiSpecies.qsub
 qsub indexing_multiSpecies.qsub
 IDX_PREFIX="/groups/lorolab/mr-eyes/final_experiment/genomes_cDBGs/idx_multiSpecies_9_k75.fa"
