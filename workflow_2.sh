@@ -185,8 +185,8 @@ for SAMPLE in $SAMPLES;
       do
           echo "Processing Genome ${GENOME_ID}"
           originalCDBG=${groupNames[$GENOME_ID]}
-          cat ${SAMPLE}/genome_${GENOME_ID}_partition.fa | awk 'BEGIN{OFS="\n";}!/^>/{print ">"NR/2,$0}' >> ${contigsFasta}
-          cat ${SAMPLE}/genome_${GENOME_ID}_partition.fa | awk -v seqName=$originalCDBG 'BEGIN{OFS="\t";}!/^>/{print NR/2,seqName}' >> ${contigsNames}
+          cat ${SAMPLE}/genome_${GENOME_ID}_partition.fa | awk -v gid=$GENOME_ID 'BEGIN{OFS="\n";}!/^>/{print ">"gid"."NR/2,$0}' >> ${contigsFasta}
+          cat ${SAMPLE}/genome_${GENOME_ID}_partition.fa | awk -v gid=$GENOME_ID -v seqName=$originalCDBG 'BEGIN{OFS="\t";}!/^>/{print gid"."NR/2,seqName}' >> ${contigsNames}
     done;
 done;
 
