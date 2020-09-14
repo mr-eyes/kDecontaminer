@@ -183,10 +183,11 @@ for SAMPLE in $SAMPLES;
     echo "Processing $SAMPLE"
     for GENOME_ID in 1 2 3 4 5 6 7 8 9;
       do
+          ((CONTIGS_COUNTER++))
           echo "Processing Genome ${GENOME_ID}"
           originalCDBG=${groupNames[$GENOME_ID]}
-          cat ${SAMPLE}/genome_${GENOME_ID}_partition.fa | awk -v gid=$GENOME_ID 'BEGIN{OFS="\n";}!/^>/{print ">"gid"."NR/2,$0}' >> ${contigsFasta}
-          cat ${SAMPLE}/genome_${GENOME_ID}_partition.fa | awk -v gid=$GENOME_ID -v seqName=$originalCDBG 'BEGIN{OFS="\t";}!/^>/{print gid"."NR/2,seqName}' >> ${contigsNames}
+          cat ${SAMPLE}/genome_${GENOME_ID}_partition.fa | awk -v gid=$CONTIGS_COUNTER 'BEGIN{OFS="\n";}!/^>/{print ">"gid"."NR/2,$0}' >> ${contigsFasta}
+          cat ${SAMPLE}/genome_${GENOME_ID}_partition.fa | awk -v gid=$CONTIGS_COUNTER -v seqName=$originalCDBG 'BEGIN{OFS="\t";}!/^>/{print gid"."NR/2,seqName}' >> ${contigsNames}
     done;
 done;
 
@@ -204,7 +205,7 @@ cat ${contigsNames} ${multiSpecisCDBG_names} > allSamples_with_9Genomes.fa.names
 
 INDEXING=/groups/lorolab/mr-eyes/oveview_exp/kDecontaminer/indexing.py
 
-clusterize -d -n 4 /usr/bin/time -v python ${INDEXING} allSamples_with_9Genomes.fa allSamples_with_9Genomes.fa.names 21
+clusterize -d -n 5 /usr/bin/time -v python ${INDEXING} allSamples_with_9Genomes.fa allSamples_with_9Genomes.fa.names 21
 
 FULL_IDX_PREFIX=/groups/lorolab/mr-eyes/final_experiment/idx_allSamples_with_9Genomes.fa
 
