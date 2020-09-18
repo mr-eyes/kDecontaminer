@@ -1,7 +1,7 @@
 ############ Run the containment screening test
 bash contamination_screen.sh
 
-## Download candidate genomes
+## Download candidate genomes (To be edited later)
 mkdir -p /groups/lorolab/Tamer/
 cd /groups/lorolab/Tamer/
 wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/091/205/GCF_000091205.1_ASM9120v1/GCF_000091205.1_ASM9120v1_genomic.fna.gz
@@ -46,7 +46,7 @@ THREADS=5
 SAMPLES="Ast25B Ast26B Ast27B Ast28B Ast29B Ast30A Ast34D Ast35D Ast36C Ast42B Ast44B Ast45B AW2C AW3D AW8D"
 SAMPLES_DIR="/groups/lorolab/Astrangia/Astrangia2019"
 cDBG_partitioner="/groups/lorolab/mr-eyes/oveview_exp/kDecontaminer/build/cDBG_partitioner"
-IDX_PREFIX="/groups/lorolab/mr-eyes/final_experiment/genomes_cDBGs/idx_multiSpecies_9_k75.fa"
+IDX_PREFIX="/groups/lorolab/mr-eyes/final_experiment/genomes_cDBGs/idx_multiSpecies_10_k75.fa"
 
 
 mkdir -p samples_cDBGs && cd samples_cDBGs
@@ -120,16 +120,16 @@ python /groups/lorolab/mr-eyes/oveview_exp/kDecontaminer/transform.py detailed_C
 
 
 ## ----------- genomes_cDBG Indexing ----------------------
-# Move genomes of interest into /groups/lorolab/Tamer/9genomes
-mv *gz 9genomes/
-cd 9genomes/ && gunzip *gz
+# Move genomes of interest into /groups/lorolab/Tamer/10genomes
+mv *gz 10genomes/
+cd 10genomes/ && gunzip *gz
 
 
 cd genomes_cDBGs
-python /groups/lorolab/mr-eyes/oveview_exp/kDecontaminer/unitigsTokProcessorFormat.py multiSpecies_9_k75 9genomes/*fa
+python /groups/lorolab/mr-eyes/oveview_exp/kDecontaminer/unitigsTokProcessorFormat.py multiSpecies_9_k75 10genomes/*fa
 clusterize -d -nosub -n 8 python /groups/lorolab/mr-eyes/oveview_exp/kDecontaminer/indexing.py multiSpecies_9_k75.fa multiSpecies_9_k75.fa.names 21 > indexing_multiSpecies.qsub
 qsub indexing_multiSpecies.qsub
-IDX_PREFIX="/groups/lorolab/mr-eyes/final_experiment/genomes_cDBGs/idx_multiSpecies_9_k75.fa"
+IDX_PREFIX="/groups/lorolab/mr-eyes/final_experiment/genomes_cDBGs/idx_multiSpecies_10_k75.fa"
 
 # -------------------------------------------------------------------------------------------
 
@@ -138,7 +138,7 @@ IDX_PREFIX="/groups/lorolab/mr-eyes/final_experiment/genomes_cDBGs/idx_multiSpec
 SAMPLES="Ast25B Ast26B Ast27B Ast28B Ast29B Ast30A Ast34D Ast35D Ast36C Ast42B Ast44B Ast45B AW2C AW3D AW8D"
 SAMPLES_DIR="/groups/lorolab/mr-eyes/final_experiment/samples_cDBGs"
 cDBG_partitioner="/groups/lorolab/mr-eyes/oveview_exp/kDecontaminer/build/cDBG_partitioner"
-IDX_PREFIX="/groups/lorolab/mr-eyes/final_experiment/genomes_cDBGs/idx_multiSpecies_9_k75.fa"
+IDX_PREFIX="/groups/lorolab/mr-eyes/final_experiment/genomes_cDBGs/idx_multiSpecies_10_k75.fa"
 KMER_SIZE=75
 
 for SAMPLE in $SAMPLES;
@@ -169,6 +169,7 @@ groupNames[6]=cDBG_k75_GCA_0017500851_Fracy1_genomic
 groupNames[7]=cDBG_k75_GCA_0020494552_P_umbilicalis_v1_genomic
 groupNames[8]=cDBG_k75_GCF_0001435352_ASM14353v4_genomic
 groupNames[9]=cDBG_k75_GCF_0003727251_Emiliana_huxleyi_CCMP1516_main_genome_assembly_v10_genomic
+groupNames[10]=cDBG_k75_Ost699_genome_LATEST
 
 contigsFasta=$(pwd)/allSamples_contigs.fa
 contigsNames=$(pwd)/allSamples_contigs.fa.names
@@ -181,23 +182,24 @@ CONTIGS_COUNTER=1
 for SAMPLE in $SAMPLES;
   do
     echo "Processing $SAMPLE"
-    for GENOME_ID in 1 2 3 4 5 6 7 8 9;
+    for GENOME_ID in 1 2 3 4 5 6 7 8 9 10;
       do
           ((CONTIGS_COUNTER++))
           echo "Processing Genome ${GENOME_ID}"
           originalCDBG=${groupNames[$GENOME_ID]}
-          cat ${SAMPLE}/genome_${GENOME_ID}_partition.fa | awk -v gid=$CONTIGS_COUNTER 'BEGIN{OFS="\n";}!/^>/{print ">"gid,$0}' >> ${contigsFasta}
-          cat ${SAMPLE}/genome_${GENOME_ID}_partition.fa | awk -v gid=$CONTIGS_COUNTER -v seqName=$originalCDBG 'BEGIN{OFS="\t";}!/^>/{print gid,seqName}' >> ${contigsNames}
+          cat ${SAMPLE}/genome_${GENOME_ID}_partition.fa | awk -v gid=$GENOME_ID -v sample=$SAMPLE 'BEGIN{OFS="\n";}!/^>/{print ">"gid"."sample"."NR/2,$0}' >> ${contigsFasta}
+          cat ${SAMPLE}/genome_${GENOME_ID}_partition.fa | awk -v gid=$GENOME_ID -v sample=$SAMPLE -v seqName=$originalCDBG 'BEGIN{OFS="\t";}!/^>/{print ">"gid"."sample"."NR/2,seqName}' >> ${contigsNames}
     done;
 done;
 
 # Merging the contigs with the original cDBGs
 
-multiSpecisCDBG_fasta=/groups/lorolab/mr-eyes/final_experiment/genomes_cDBGs/multiSpecies_9_k75.fa
-multiSpecisCDBG_names=/groups/lorolab/mr-eyes/final_experiment/genomes_cDBGs/multiSpecies_9_k75.fa.names
 
-cat ${contigsFasta} ${multiSpecisCDBG_fasta} > allSamples_with_9Genomes.fa
-cat ${contigsNames} ${multiSpecisCDBG_names} > allSamples_with_9Genomes.fa.names
+multiSpecisCDBG_fasta=/groups/lorolab/mr-eyes/final_experiment/genomes_cDBGs/multiSpecies_10_k75.fa
+multiSpecisCDBG_names=/groups/lorolab/mr-eyes/final_experiment/genomes_cDBGs/multiSpecies_10_k75.fa.names
+
+cat ${contigsFasta} ${multiSpecisCDBG_fasta} > allSamples_with_10genomes.fa
+cat ${contigsNames} ${multiSpecisCDBG_names} > allSamples_with_10genomes.fa.names
 
 
 #------------------------------------------------------------------------
@@ -205,9 +207,9 @@ cat ${contigsNames} ${multiSpecisCDBG_names} > allSamples_with_9Genomes.fa.names
 
 INDEXING=/groups/lorolab/mr-eyes/oveview_exp/kDecontaminer/indexing.py
 
-clusterize -d -n 5 /usr/bin/time -v python ${INDEXING} allSamples_with_9Genomes.fa allSamples_with_9Genomes.fa.names 21
+clusterize -d -n 6 /usr/bin/time -v python ${INDEXING} allSamples_with_10genomes.fa allSamples_with_10genomes.fa.names 21
 
-FULL_IDX_PREFIX=/groups/lorolab/mr-eyes/final_experiment/idx_allSamples_with_9Genomes.fa
+FULL_IDX_PREFIX=/groups/lorolab/mr-eyes/final_experiment/idx_allSamples_with_10genomes.fa
 
 
 # ----------------------------------------------------------------------------------
@@ -217,7 +219,7 @@ FULL_IDX_PREFIX=/groups/lorolab/mr-eyes/final_experiment/idx_allSamples_with_9Ge
 SAMPLES="Ast25B Ast26B Ast27B Ast28B Ast29B Ast30A Ast34D Ast35D Ast36C Ast42B Ast44B Ast45B AW2C AW3D AW8D"
 SAMPLES_DIR="/groups/lorolab/Astrangia/Astrangia2019"
 fastqPartitioner="/groups/lorolab/mr-eyes/oveview_exp/kDecontaminer/build/fastq_partitioner"
-FULL_IDX_PREFIX=/groups/lorolab/mr-eyes/final_experiment/idx_allSamples_with_9Genomes.fa
+FULL_IDX_PREFIX=/groups/lorolab/mr-eyes/final_experiment/idx_allSamples_with_10genomes.fa
 
 
 mkdir reads_partitions && cd reads_partitions
@@ -242,7 +244,7 @@ cd ..
 genome_${GENOME_ID}_readsPartition_R1.fastq
 genome_${GENOME_ID}_readsPartition_R2.fastq
 
-for GENOME_ID in 1 2 3 4 5 6 7 8 9;
+for GENOME_ID in 1 2 3 4 5 6 7 8 9 10;
 do
     touch decontaminated_genome_${GENOME_ID}_R1.fastq
     touch decontaminated_genome_${GENOME_ID}_R2.fastq
@@ -251,7 +253,7 @@ done
 for SAMPLE in $SAMPLES;
   do
     echo "Processing $SAMPLE"
-    for GENOME_ID in 1 2 3 4 5 6 7 8 9;
+    for GENOME_ID in 1 2 3 4 5 6 7 8 9 10;
       do
           echo "Processing Genome ${GENOME_ID}"
           originalCDBG=${groupNames[$GENOME_ID]}
@@ -273,7 +275,7 @@ SUMMARY_TSV="partitioning_summary.tsv"
 touch ${SUMMARY_TSV}
 printf "sample\ttotal" >> ${SUMMARY_TSV}
 
-for i in 1 2 3 4 5 6 7 8 9
+for i in 1 2 3 4 5 6 7 8 9 10
 do  
     printf "\tgenome_${i}" >> ${SUMMARY_TSV}
 done
@@ -288,7 +290,7 @@ do
     ORIGINAL_GENOME_LINES=$(zcat ${SAMPLES_ORIGINAL_DIR}/${SAMPLE}_R1_001.fastq.gz | wc -l)
     GENOMES_SEQS=$((ORIGINAL_GENOME_LINES / 4))
     TSV_LINE+="${GENOMES_SEQS}"
-    for GENOME_ID in 1 2 3 4 5 6 7 8 9
+    for GENOME_ID in 1 2 3 4 5 6 7 8 9 10
     do      
             echo "Processing ${SAMPLE}/${GENOME_ID}"
             PARTITION_LINES=$(cat ${SAMPLES_OUTPUT_DIR}/${SAMPLE}/genome_${GENOME_ID}_readsPartition_R1.fastq | wc -l)
@@ -316,7 +318,7 @@ for SAMPLE in $SAMPLES;
     do
         mkdir -p $SAMPLE && cd $SAMPLE
         echo "Processing $SAMPLE"
-        for GENOME_ID in 1 2 3 4 5 6 7 8 9;
+        for GENOME_ID in 1 2 3 4 5 6 7 8 9 10;
         do
             R1=${SAMPLES_OUTPUT_DIR}/${SAMPLE}/genome_${GENOME_ID}_readsPartition_R1.fastq
             R2=${SAMPLES_OUTPUT_DIR}/${SAMPLE}/genome_${GENOME_ID}_readsPartition_R2.fastq
